@@ -40,7 +40,7 @@
     .row-mythic    { background-color: #cfbc41; }
     .row-special   { background-color: #25262c; }
 
-    /* UNIFORM BADGE SIZING */
+    /* UNIFORM TEXT SIZING */
     .badge-container { width: 340px; min-width: 340px; display: flex; align-items: center; justify-content: center; padding: 0 15px; flex-shrink: 0; z-index: 5; }
     .rarity-badge-img { height: 48px; width: auto; max-width: none; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35)); }
 
@@ -113,17 +113,14 @@
 </head>
 <body>
 
-  <!-- Background Folder Picker Input -->
-  <input type="file" id="folder-picker-input" webkitdirectory directory multiple style="display:none;" />
-
   <div id="dashboard">
     <div id="main-area">
 
-      <!-- BINDER VIEW -->
+      <!-- BINDER VIEW (CASE-CORRECTED ICONS) -->
       <div id="binder-view" class="view-panel active">
         <div class="diagonal-text" id="diagonal-text">(cards will sort here)</div>
-        <div class="rarity-row row-common"><div class="badge-container"><img class="rarity-badge-img" src="Icons/COMMON.png" alt="COMMON" /></div><div class="cards-horizontal-strip" id="strip-Common"></div></div>
-        <div class="rarity-row row-uncommon"><div class="badge-container"><img class="rarity-badge-img" src="Icons/UNCOMMON.png" alt="UNCOMMON" /></div><div class="cards-horizontal-strip" id="strip-Uncommon"></div></div>
+        <div class="rarity-row row-common"><div class="badge-container"><img class="rarity-badge-img" src="Icons/Common.png" alt="COMMON" /></div><div class="cards-horizontal-strip" id="strip-Common"></div></div>
+        <div class="rarity-row row-uncommon"><div class="badge-container"><img class="rarity-badge-img" src="Icons/Uncommon.png" alt="UNCOMMON" /></div><div class="cards-horizontal-strip" id="strip-Uncommon"></div></div>
         <div class="rarity-row row-rare"><div class="badge-container"><img class="rarity-badge-img" src="Icons/RARE.png" alt="RARE" /></div><div class="cards-horizontal-strip" id="strip-Rare"></div></div>
         <div class="rarity-row row-epic"><div class="badge-container"><img class="rarity-badge-img" src="Icons/EPIC.png" alt="EPIC" /></div><div class="cards-horizontal-strip" id="strip-Epic"></div></div>
         <div class="rarity-row row-legendary"><div class="badge-container"><img class="rarity-badge-img" src="Icons/LEGENDARY.png" alt="LEGENDARY" /></div><div class="cards-horizontal-strip" id="strip-Legendary"></div></div>
@@ -151,11 +148,11 @@
 
     <!-- SIDEBAR -->
     <div class="sidebar">
-      <div class="logo-container"><img class="logo-img" src="Icons/CARDZ.png" alt="CARDZ" /></div>
+      <div class="logo-container"><img class="logo-img" src="Icons/Cardz.png" alt="CARDZ" /></div>
       <button class="sidebar-btn" onclick="alert('Duel mode coming soon!')"><img src="Icons/Duel.png" alt="DUEL" /></button>
       <button class="sidebar-btn" id="nav-shop-btn"><img src="Icons/Shop.png" alt="SHOP" /></button>
       <button class="sidebar-btn" id="nav-cards-btn"><img src="Icons/Cards.png" alt="CARDS" /></button>
-      <button class="sidebar-btn" id="settings-btn" title="Rescan Card Folders"><img src="Icons/Settings.png" alt="SETTINGS" /></button>
+      <button class="sidebar-btn" id="settings-btn" title="Sync Cards from GitHub"><img src="Icons/Settings.png" alt="SETTINGS" /></button>
     </div>
   </div>
 
@@ -182,99 +179,70 @@
     const userInventory = { Common: {}, Uncommon: {}, Rare: {}, Epic: {}, Legendary: {}, Mythic: {}, Special: {} };
     let totalCardsCollected = 0;
 
-    // =========================================================
-    // DYNAMIC FOLDER SCANNING
-    // =========================================================
+    // Default backup cards
+    cardDecks.Common.push('Common/Crayons.png', 'Common/Smiley.png');
 
-    // Method A: Auto-fetch directory index when running on local server (Live Server)
-    async function autoFetchServerDirectories() {
-      if (!location.protocol.startsWith('http')) return false;
-      let foundAny = false;
-      for (const folder of FOLDERS) {
-        try {
-          const res = await fetch(`./${folder}/`);
-          if (res.ok) {
-            const text = await res.text();
-            const matches = text.match(/href=["']([^"']+\.png)["']/gi);
-            if (matches) {
-              matches.forEach(m => {
-                const raw = m.replace(/href=["']/i, '').replace(/["']$/, '');
-                const filename = raw.split('/').pop();
-                const path = `${folder}/${filename}`;
-                if (!cardDecks[folder].includes(path)) cardDecks[folder].push(path);
-              });
-              foundAny = true;
+    // =========================================================
+    // AUTOMATIC GITHUB REPOSITORY SYNC
+    // =========================================================
+    async function syncCardsFromGitHub(notify = false) {
+      try {
+        const res = await fetch('https://api.github.com/repos/ThatOneDudeYT/Cardz/git/trees/main?recursive=1');
+        if (!res.ok) throw new Error('GitHub sync failed');
+        const data = await res.json();
+        if (!data.tree) return;
+
+        // Reset decks with fresh list
+        FOLDERS.forEach(f => cardDecks[f] = []);
+
+        let totalFound = 0;
+        data.tree.forEach(item => {
+          if (item.type === 'blob' && item.path.toLowerCase().endsWith('.png')) {
+            const parts = item.path.split('/');
+            const filename = parts.pop();
+            const parent = parts.pop();
+
+            if (!parent || parent.toLowerCase() === 'icons') return;
+
+            const matchedRarity = FOLDERS.find(f => f.toLowerCase() === parent.toLowerCase());
+            if (matchedRarity) {
+              const cardPath = `${matchedRarity}/${filename}`;
+              if (!cardDecks[matchedRarity].includes(cardPath)) {
+                cardDecks[matchedRarity].push(cardPath);
+                totalFound++;
+              }
             }
+          }
+        });
+
+        localStorage.setItem('CardzDecksCache', JSON.stringify(cardDecks));
+        if (notify) alert(`Successfully synced ${totalFound} cards from GitHub!`);
+      } catch (err) {
+        // If offline or rate limited, load from cached storage
+        try {
+          const cached = localStorage.getItem('CardzDecksCache');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            for (let r in parsed) cardDecks[r] = parsed[r];
           }
         } catch (e) {}
       }
-      if (foundAny) {
-        localStorage.setItem('CardzDecksCache', JSON.stringify(cardDecks));
-      }
-      return foundAny;
     }
 
-    // Method B: Parse selected folder files (for file:// protocol)
-    function processFolderFiles(files) {
-      let count = 0;
-      for (const file of files) {
-        const pathSegments = (file.webkitRelativePath || file.name).split('/');
-        if (pathSegments.length >= 2) {
-          const folder = pathSegments[pathSegments.length - 2];
-          const filename = pathSegments[pathSegments.length - 1];
-
-          if (folder.toLowerCase() === 'icons') continue;
-          if (!filename.toLowerCase().endsWith('.png')) continue;
-
-          const matchedRarity = FOLDERS.find(f => f.toLowerCase() === folder.toLowerCase());
-          if (matchedRarity) {
-            const relPath = `${matchedRarity}/${filename}`;
-            if (!cardDecks[matchedRarity].includes(relPath)) {
-              cardDecks[matchedRarity].push(relPath);
-              count++;
-            }
-          }
-        }
-      }
-      if (count > 0) {
-        localStorage.setItem('CardzDecksCache', JSON.stringify(cardDecks));
-        alert(`Loaded ${count} cards across your folders!`);
-      }
-    }
-
-    const folderInput = document.getElementById('folder-picker-input');
-    folderInput.addEventListener('change', (e) => processFolderFiles(e.target.files));
-
-    document.getElementById('settings-btn').addEventListener('click', () => {
-      folderInput.click();
-    });
+    document.getElementById('settings-btn').addEventListener('click', () => syncCardsFromGitHub(true));
 
     // =========================================================
-    // STORAGE & SYNC
+    // STORAGE & INVENTORY
     // =========================================================
     function saveInventory() { 
       localStorage.setItem('CardzInventory', JSON.stringify(userInventory)); 
     }
 
-    function loadCachedData() {
-      // 1. Load cached deck cards
+    function loadInventory() {
       try {
-        const savedDecks = localStorage.getItem('CardzDecksCache');
-        if (savedDecks) {
-          const parsed = JSON.parse(savedDecks);
-          for (let r in parsed) {
-            parsed[r].forEach(p => {
-              if (!cardDecks[r].includes(p)) cardDecks[r].push(p);
-            });
-          }
-        }
-      } catch(e) {}
-
-      // 2. Load user collection (purging legacy phantoms)
-      try {
-        const savedInv = localStorage.getItem('CardzInventory');
-        if (savedInv) {
-          const parsed = JSON.parse(savedInv);
+        const saved = localStorage.getItem('CardzInventory');
+        if (saved) {
+          const parsed = JSON.parse(saved);
           totalCardsCollected = 0;
           for (let r in parsed) {
             for (let src in parsed[r]) {
@@ -286,14 +254,15 @@
           }
         }
       } catch(e) {}
-
+      
       saveInventory();
       if (totalCardsCollected > 0) document.getElementById('diagonal-text').style.display = 'none';
       RARITIES.forEach(r => renderBinderRow(r.name));
     }
 
-    loadCachedData();
-    autoFetchServerDirectories();
+    // Initialize
+    loadInventory();
+    syncCardsFromGitHub(false);
 
     function addCardToInventory(rarity, src) {
       if (!userInventory[rarity][src]) userInventory[rarity][src] = 0;
@@ -386,7 +355,7 @@
     }
 
     // =========================================================
-    // DYNAMIC PULL LOGIC
+    // DYNAMIC PULL LOGIC (PERCENTAGE WEIGHTED)
     // =========================================================
     const packWrapper = document.getElementById('pack-wrapper'),
           hitbox = document.getElementById('pack-top-hitbox'),
@@ -451,9 +420,7 @@
 
       const pulled = pullCardData();
       if (!pulled) {
-        alert('No card files detected! Please click OK and select your CardZ folder so the browser can index your PNGs.');
         onPointerUp();
-        folderInput.click();
         return;
       }
 
