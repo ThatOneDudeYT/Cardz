@@ -47,7 +47,7 @@
     .cards-horizontal-strip::-webkit-scrollbar { height: 8px; }
     .cards-horizontal-strip::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.5); border-radius: 4px; }
 
-    .card-stack { position: relative; height: 90%; aspect-ratio: 220 / 325; flex-shrink: 0; cursor: pointer; transition: transform 0.15s ease; pointer-events: auto !important; }
+    .card-stack { position: relative; height: 90%; aspect-ratio: 220 / 325; flex-shrink: 0; cursor: default; transition: transform 0.15s ease; pointer-events: auto !important; }
     .card-stack:hover { transform: scale(1.05) translateY(-5px); }
     .stack-count { position: absolute; top: -42px; width: 100%; text-align: center; font-size: 2.5rem; color: white; -webkit-text-stroke: 3.5px black; z-index: 10; text-shadow: 0 3px 0px #000; pointer-events: none; line-height: 1; }
     
@@ -87,18 +87,12 @@
     .shop-card-stage { perspective: 1200px; display: none; flex-direction: column; align-items: center; transform-style: preserve-3d; }
     .shop-card-stage.active { display: flex; }
     .card-wrapper-3d { width: 230px; height: auto; aspect-ratio: 220 / 325; position: relative; transform-style: preserve-3d; transition: transform 0.08s ease-out; will-change: transform; filter: drop-shadow(0 20px 35px rgba(0, 0, 0, 0.6)); display: flex; align-items: center; justify-content: center; }
-    .card-wrapper-3d.pop-anim { animation: popBurst 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-    @keyframes popBurst { 0% { transform: scale(0.2) translateY(120px) rotate(-10deg); opacity: 0; } 100% { transform: scale(1) translateY(0) rotate(0deg); opacity: 1; } }
+    .card-wrapper-3d.pop-anim { animation: popBurst 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    @keyframes popBurst { 0% { transform: scale(0.3) translateY(80px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
     .card-wrapper-3d img { width: 100%; height: 100%; object-fit: contain; display: block; }
     
     .again-btn { margin-top: 40px; padding: 8px 28px; background: #f7b93b; border: none; color: white; -webkit-text-stroke: 1.5px #b88621; font-size: 1.8rem; border-radius: 12px; cursor: pointer; box-shadow: 0 7px 0 #b88621; font-family: inherit; }
     .again-btn:active { transform: translateY(6px); box-shadow: 0 1px 0 #b88621; }
-
-    /* INSPECT MODAL */
-    #inspect-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(17, 18, 21, 0.85); backdrop-filter: blur(8px); z-index: 999; display: none; flex-direction: column; align-items: center; justify-content: center; }
-    #inspect-modal.active { display: flex; }
-    .close-inspect-btn { position: absolute; top: 30px; left: 30px; padding: 6px 24px; background: #ef5b5b; color: white; border: 3px solid #c74545; border-radius: 12px; font-size: 1.4rem; cursor: pointer; box-shadow: 0 6px 0 #9d2b2b; font-family: inherit; }
-    .close-inspect-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #9d2b2b; }
 
     /* SIDEBAR */
     .sidebar { width: 310px; height: 100vh; background-color: #f7b93b; border-left: 14px solid #b88621; display: flex; flex-direction: column; align-items: center; padding: 30px 22px; box-shadow: -12px 0 35px rgba(0, 0, 0, 0.35); z-index: 50; }
@@ -154,13 +148,6 @@
     </div>
   </div>
 
-  <div id="inspect-modal">
-    <button class="close-inspect-btn" id="close-inspect-btn">X CLOSE</button>
-    <div style="perspective:1200px; display:flex; flex-direction:column; align-items:center;">
-      <div class="card-wrapper-3d" id="inspect-card-3d" style="width: 280px;"><img id="img-inspect-card" src="" alt="Inspect" /></div>
-    </div>
-  </div>
-
   <script>
     const RARITIES = [
       { name: 'Common', weight: 50.0 },
@@ -178,7 +165,7 @@
     let totalCardsCollected = 0;
 
     // =========================================================
-    // AUTOMATIC GITHUB SYNC WITH ERROR REPORTING
+    // AUTOMATIC GITHUB REPOSITORY SYNC
     // =========================================================
     async function syncCardsFromGitHub(notify = false) {
       try {
@@ -197,7 +184,6 @@
         const data = await res.json();
         if (!data.tree) return;
 
-        // Reset decks
         FOLDERS.forEach(f => cardDecks[f] = []);
 
         data.tree.forEach(item => {
@@ -210,7 +196,6 @@
 
             const matched = FOLDERS.find(f => f.toLowerCase() === parentDir.toLowerCase());
             if (matched) {
-              // Store exact relative path so Render never returns a 404
               const fullPath = item.path.startsWith('CardZ/') ? item.path.replace('CardZ/', '') : item.path;
               if (!cardDecks[matched].includes(fullPath)) {
                 cardDecks[matched].push(fullPath);
@@ -233,11 +218,10 @@
       }
     }
 
-    // Settings gear displays full rarity card breakdown
     document.getElementById('settings-btn').addEventListener('click', () => syncCardsFromGitHub(true));
 
     // =========================================================
-    // INVENTORY STORAGE
+    // STORAGE & INVENTORY
     // =========================================================
     function saveInventory() { 
       localStorage.setItem('CardzInventory', JSON.stringify(userInventory)); 
@@ -313,7 +297,6 @@
       el.addEventListener('mouseleave', () => el.style.transform = 'rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)');
     }
     attach3DEffect('shop-card-3d');
-    attach3DEffect('inspect-card-3d');
 
     function renderBinderRow(rarity) {
       const strip = document.getElementById(`strip-${rarity}`);
@@ -322,7 +305,6 @@
       for (const [src, count] of Object.entries(userInventory[rarity])) {
         const stackDiv = document.createElement('div');
         stackDiv.className = 'card-stack';
-        stackDiv.onclick = () => openInspectModal(src);
 
         if (count > 1) {
           const countDiv = document.createElement('div');
@@ -358,16 +340,8 @@
       }
     }
 
-    const inspectModal = document.getElementById('inspect-modal');
-    document.getElementById('close-inspect-btn').addEventListener('click', () => inspectModal.classList.remove('active'));
-    function openInspectModal(src) {
-      document.getElementById('img-inspect-card').src = src;
-      document.getElementById('inspect-card-3d').style.transform = 'none';
-      inspectModal.classList.add('active');
-    }
-
     // =========================================================
-    // PERCENTAGE WEIGHTED PULL LOGIC
+    // INSTANT TEAR & REVEAL LOGIC
     // =========================================================
     const packWrapper = document.getElementById('pack-wrapper'),
           hitbox = document.getElementById('pack-top-hitbox'),
@@ -406,15 +380,17 @@
     function onPointerMove(e) {
       if (!isDragging) return;
       const pullUp = Math.max(0, -((e.touches ? e.touches[0] : e).clientY - startY));
-      let stretchY = 1 + (pullUp / 100);
+      let stretchY = 1 + (pullUp / 75);
       packTopImgDOM.style.transform = `scaleY(${stretchY})`;
-      if (pullUp > 150) completeTear();
+
+      // Low threshold (100px) so the tear triggers instantly
+      if (pullUp > 100) completeTear();
     }
 
     function onPointerUp() {
       if (!isDragging) return;
       isDragging = false;
-      packTopImgDOM.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)';
+      packTopImgDOM.style.transition = 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)';
       packTopImgDOM.style.transform = 'scaleY(1)';
       packTopImgDOM.classList.add('flash-alert');
     }
@@ -437,11 +413,15 @@
         return;
       }
 
+      // Preload image source immediately so it displays without lag
+      const cardImg = document.getElementById('img-pulled-card');
+      cardImg.src = pulled.src;
+
       try {
         const aCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const buf = aCtx.createBuffer(1, aCtx.sampleRate * 0.3, aCtx.sampleRate);
+        const buf = aCtx.createBuffer(1, aCtx.sampleRate * 0.2, aCtx.sampleRate);
         const out = buf.getChannelData(0);
-        for (let i = 0; i < buf.length; i++) out[i] = (Math.random() * 2 - 1) * Math.exp(-i / (buf.length * 0.3));
+        for (let i = 0; i < buf.length; i++) out[i] = (Math.random() * 2 - 1) * Math.exp(-i / (buf.length * 0.2));
         const src = aCtx.createBufferSource();
         src.buffer = buf;
         const flt = aCtx.createBiquadFilter();
@@ -452,20 +432,21 @@
         src.start();
       } catch (e) {}
 
-      packTopImgDOM.style.transition = 'transform 0.35s ease-in, opacity 0.3s';
-      packTopImgDOM.style.transform = 'translateY(-120px) scaleY(1.5)';
+      // Fast 0.12s tear snap
+      packTopImgDOM.style.transition = 'transform 0.12s ease-out, opacity 0.1s';
+      packTopImgDOM.style.transform = 'translateY(-80px) scaleY(1.4)';
       packTopImgDOM.style.opacity = '0';
 
+      // Instant swap after 100ms
       setTimeout(() => {
         packWrapper.style.display = 'none';
-        document.getElementById('img-pulled-card').src = pulled.src;
         shopCardStage.classList.add('active');
         const card3D = document.getElementById('shop-card-3d');
         card3D.classList.remove('pop-anim');
         void card3D.offsetWidth;
         card3D.classList.add('pop-anim');
         addCardToInventory(pulled.rarity, pulled.src);
-      }, 350);
+      }, 100);
     }
 
     document.getElementById('again-btn').addEventListener('click', () => {
