@@ -40,7 +40,6 @@
     .row-mythic    { background-color: #cfbc41; }
     .row-special   { background-color: #25262c; }
 
-    /* UNIFORM TEXT SIZING */
     .badge-container { width: 340px; min-width: 340px; display: flex; align-items: center; justify-content: center; padding: 0 15px; flex-shrink: 0; z-index: 5; }
     .rarity-badge-img { height: 48px; width: auto; max-width: none; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35)); }
 
@@ -75,7 +74,6 @@
     .pack-top-hitbox { position: absolute; bottom: calc(100% - 15px); left: 0; width: 100%; height: 80px; z-index: 30; cursor: grab; }
     .pack-top-hitbox:active { cursor: grabbing; }
 
-    /* PURE RED FLASH EVERY 3 SECONDS */
     @keyframes flashRedAlert {
       0%, 70%, 100% { filter: drop-shadow(0 0 0 transparent); }
       85% { filter: drop-shadow(0 0 25px #ff0000) drop-shadow(0 0 50px #ff0000) brightness(1.25); }
@@ -116,7 +114,7 @@
   <div id="dashboard">
     <div id="main-area">
 
-      <!-- BINDER VIEW (CASE-CORRECTED ICONS) -->
+      <!-- BINDER VIEW -->
       <div id="binder-view" class="view-panel active">
         <div class="diagonal-text" id="diagonal-text">(cards will sort here)</div>
         <div class="rarity-row row-common"><div class="badge-container"><img class="rarity-badge-img" src="Icons/Common.png" alt="COMMON" /></div><div class="cards-horizontal-strip" id="strip-Common"></div></div>
@@ -152,7 +150,7 @@
       <button class="sidebar-btn" onclick="alert('Duel mode coming soon!')"><img src="Icons/Duel.png" alt="DUEL" /></button>
       <button class="sidebar-btn" id="nav-shop-btn"><img src="Icons/Shop.png" alt="SHOP" /></button>
       <button class="sidebar-btn" id="nav-cards-btn"><img src="Icons/Cards.png" alt="CARDS" /></button>
-      <button class="sidebar-btn" id="settings-btn" title="Sync Cards from GitHub"><img src="Icons/Settings.png" alt="SETTINGS" /></button>
+      <button class="sidebar-btn" id="settings-btn" title="View Loaded Cards & Rescan"><img src="Icons/Settings.png" alt="SETTINGS" /></button>
     </div>
   </div>
 
@@ -179,66 +177,81 @@
     const userInventory = { Common: {}, Uncommon: {}, Rare: {}, Epic: {}, Legendary: {}, Mythic: {}, Special: {} };
     let totalCardsCollected = 0;
 
-    // Default backup cards
-    cardDecks.Common.push('Common/Crayons.png', 'Common/Smiley.png');
-
     // =========================================================
-    // AUTOMATIC GITHUB REPOSITORY SYNC
+    // AUTOMATIC GITHUB SYNC WITH ERROR REPORTING
     // =========================================================
     async function syncCardsFromGitHub(notify = false) {
       try {
         const res = await fetch('https://api.github.com/repos/ThatOneDudeYT/Cardz/git/trees/main?recursive=1');
-        if (!res.ok) throw new Error('GitHub sync failed');
+        
+        if (res.status === 404) {
+          alert("⚠️ GitHub Error: Repository not found or set to PRIVATE!\n\nTo fix this: Go to GitHub > ThatOneDudeYT/Cardz > Settings > Scroll to Danger Zone > Change visibility to PUBLIC.");
+          return;
+        }
+        if (res.status === 403) {
+          alert("⚠️ GitHub API rate limit reached! Try again in a few minutes.");
+          return;
+        }
+        if (!res.ok) throw new Error('Failed to fetch file tree');
+
         const data = await res.json();
         if (!data.tree) return;
 
-        // Reset decks with fresh list
+        // Reset decks
         FOLDERS.forEach(f => cardDecks[f] = []);
 
-        let totalFound = 0;
         data.tree.forEach(item => {
           if (item.type === 'blob' && item.path.toLowerCase().endsWith('.png')) {
-            const parts = item.path.split('/');
-            const filename = parts.pop();
-            const parent = parts.pop();
+            const segments = item.path.split('/');
+            const fileName = segments[segments.length - 1];
+            const parentDir = segments[segments.length - 2];
 
-            if (!parent || parent.toLowerCase() === 'icons') return;
+            if (!parentDir || parentDir.toLowerCase() === 'icons') return;
 
-            const matchedRarity = FOLDERS.find(f => f.toLowerCase() === parent.toLowerCase());
-            if (matchedRarity) {
-              const cardPath = `${matchedRarity}/${filename}`;
-              if (!cardDecks[matchedRarity].includes(cardPath)) {
-                cardDecks[matchedRarity].push(cardPath);
-                totalFound++;
+            const matched = FOLDERS.find(f => f.toLowerCase() === parentDir.toLowerCase());
+            if (matched) {
+              // Store exact relative path so Render never returns a 404
+              const fullPath = item.path.startsWith('CardZ/') ? item.path.replace('CardZ/', '') : item.path;
+              if (!cardDecks[matched].includes(fullPath)) {
+                cardDecks[matched].push(fullPath);
               }
             }
           }
         });
 
         localStorage.setItem('CardzDecksCache', JSON.stringify(cardDecks));
-        if (notify) alert(`Successfully synced ${totalFound} cards from GitHub!`);
+
+        if (notify) {
+          let summary = "Cards Detected in GitHub:\n\n";
+          FOLDERS.forEach(f => {
+            summary += `• ${f}: ${cardDecks[f].length} card(s)\n`;
+          });
+          alert(summary);
+        }
       } catch (err) {
-        // If offline or rate limited, load from cached storage
-        try {
-          const cached = localStorage.getItem('CardzDecksCache');
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            for (let r in parsed) cardDecks[r] = parsed[r];
-          }
-        } catch (e) {}
+        if (notify) alert("Failed to connect to GitHub. Check internet connection.");
       }
     }
 
+    // Settings gear displays full rarity card breakdown
     document.getElementById('settings-btn').addEventListener('click', () => syncCardsFromGitHub(true));
 
     // =========================================================
-    // STORAGE & INVENTORY
+    // INVENTORY STORAGE
     // =========================================================
     function saveInventory() { 
       localStorage.setItem('CardzInventory', JSON.stringify(userInventory)); 
     }
 
     function loadInventory() {
+      try {
+        const savedDecks = localStorage.getItem('CardzDecksCache');
+        if (savedDecks) {
+          const parsed = JSON.parse(savedDecks);
+          for (let r in parsed) cardDecks[r] = parsed[r];
+        }
+      } catch(e) {}
+
       try {
         const saved = localStorage.getItem('CardzInventory');
         if (saved) {
@@ -260,7 +273,6 @@
       RARITIES.forEach(r => renderBinderRow(r.name));
     }
 
-    // Initialize
     loadInventory();
     syncCardsFromGitHub(false);
 
@@ -355,7 +367,7 @@
     }
 
     // =========================================================
-    // DYNAMIC PULL LOGIC (PERCENTAGE WEIGHTED)
+    // PERCENTAGE WEIGHTED PULL LOGIC
     // =========================================================
     const packWrapper = document.getElementById('pack-wrapper'),
           hitbox = document.getElementById('pack-top-hitbox'),
@@ -420,6 +432,7 @@
 
       const pulled = pullCardData();
       if (!pulled) {
+        alert('No cards found! Click the Settings gear to check folder sync.');
         onPointerUp();
         return;
       }
