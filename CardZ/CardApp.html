@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cardz Web App</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
+    img { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
+    body { width: 100vw; height: 100vh; overflow: hidden; font-family: 'Baloo', cursive, sans-serif; background-color: #111; display: flex; }
+
+    #dashboard { display: flex; width: 100vw; height: 100vh; }
+    #main-area { flex: 1; position: relative; height: 100vh; overflow: hidden; }
+    
+    .view-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; }
+    .view-panel.active { display: flex; }
+
+    /* =========================================================
+       BINDER VIEW (UNIFORM ROWS & FIXED SIZING)
+       ========================================================= */
+    #binder-view { flex-direction: column; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; }
+    #binder-view::-webkit-scrollbar { width: 12px; }
+    #binder-view::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.25); }
+    #binder-view::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.35); border-radius: 6px; }
+
+    .diagonal-text {
+      position: fixed; top: 50%; left: calc((100vw - 310px) / 2); transform: translate(-50%, -50%) rotate(-48deg);
+      color: rgba(255, 255, 255, 0.85); font-size: 3.6rem; line-height: 1; white-space: nowrap; pointer-events: none; text-shadow: 0 6px 14px rgba(0, 0, 0, 0.25); z-index: 1;
+    }
+
+    /* Fixed, uniform height for every single rarity row */
+    .rarity-row { 
+      height: 240px; 
+      min-height: 240px; 
+      max-height: 240px; 
+      width: 100%; 
+      position: relative; 
+      display: flex; 
+      align-items: center; 
+      box-shadow: inset 0 -5px 15px rgba(0,0,0,0.15); 
+      z-index: 2; 
+    }
+    .row-common    { background-color: #8f9298; }
+    .row-uncommon  { background-color: #5ce362; }
+    .row-rare      { background-color: #4e92e6; }
+    .row-epic      { background-color: #975bf5; }
+    .row-legendary { background-color: #f2d250; }
+    .row-mythic    { background-color: #cfbc41; }
+    .row-special   { background-color: #25262c; }
+
+    /* Uniform badges */
+    .badge-container { 
+      width: 280px; 
+      min-width: 280px; 
+      height: 100%; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      padding: 0 20px; 
+      flex-shrink: 0; 
+      z-index: 5; 
+    }
+    .rarity-badge-img { 
+      height: 48px; 
+      max-height: 48px; 
+      width: 200px; 
+      object-fit: contain; 
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35)); 
+    }
+
+    .cards-horizontal-strip { flex: 1; height: 100%; display: flex; align-items: center; gap: 35px; overflow-x: auto; overflow-y: hidden; padding: 50px 25px 15px 10px; }
+    .cards-horizontal-strip::-webkit-scrollbar { height: 8px; }
+    .cards-horizontal-strip::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.5); border-radius: 4px; }
+
+    .card-stack { position: relative; height: 165px; aspect-ratio: 220 / 325; flex-shrink: 0; cursor: pointer; transition: transform 0.15s ease; pointer-events: auto !important; }
+    .card-stack:hover { transform: scale(1.05) translateY(-5px); }
+
+    /* Crisp number counter without jagged shadows */
+    .stack-count { 
+      position: absolute; 
+      top: -38px; 
+      width: 100%; 
+      text-align: center; 
+      font-size: 2.2rem; 
+      color: white; 
+      font-weight: 900;
+      -webkit-text-stroke: 3px black; 
+      paint-order: stroke fill;
+      text-shadow: none; 
+      z-index: 10; 
+      pointer-events: none; 
+      line-height: 1; 
+    }
+    
+    .stack-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 8px; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5)); }
+    .stack-layer.layer-front { z-index: 3; position: relative; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4)); }
+    .stack-layer.layer-1 { z-index: 2; top: 10px; left: 10px; filter: brightness(0.85) drop-shadow(0 6px 12px rgba(0,0,0,0.4)); }
+    .stack-layer.layer-2 { z-index: 1; top: 20px; left: 20px; filter: brightness(0.7) drop-shadow(0 6px 12px rgba(0,0,0,0.4)); }
+
+    /* =========================================================
+       SHOP VIEW
+       ========================================================= */
+    #shop-view { background-image: url('Icons/ShopBG.png'); background-repeat: repeat; background-size: 180px; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+    .pack-wrapper { position: relative; width: 240px; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 25px 35px rgba(0, 0, 0, 0.85)); perspective: 1200px; }
+
+    .pack-top-img {
+      position: absolute;
+      bottom: calc(100% - 10px);
+      left: 3%;
+      width: 94%;
+      z-index: 20;
+      transform-origin: bottom center;
+      will-change: transform, filter;
+      pointer-events: none;
+    }
+
+    .pack-top-hitbox { position: absolute; bottom: calc(100% - 15px); left: 0; width: 100%; height: 80px; z-index: 30; cursor: grab; }
+    .pack-top-hitbox:active { cursor: grabbing; }
+
+    @keyframes flashRedAlert {
+      0%, 70%, 100% { filter: drop-shadow(0 0 0 transparent); }
+      85% { filter: drop-shadow(0 0 25px #ff0000) drop-shadow(0 0 50px #ff0000) brightness(1.25); }
+    }
+    .flash-alert { animation: flashRedAlert 3s ease-in-out infinite; }
+
+    .pack-body { position: relative; width: 100%; z-index: 5; }
+    .pack-body img { width: 100%; height: auto; display: block; }
+
+    .shop-card-stage { perspective: 1200px; display: none; flex-direction: column; align-items: center; transform-style: preserve-3d; }
+    .shop-card-stage.active { display: flex; }
+    .card-wrapper-3d { width: 230px; height: auto; aspect-ratio: 220 / 325; position: relative; transform-style: preserve-3d; transition: transform 0.08s ease-out; will-change: transform; filter: drop-shadow(0 20px 35px rgba(0, 0, 0, 0.6)); display: flex; align-items: center; justify-content: center; }
+    .card-wrapper-3d.pop-anim { animation: popBurst 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    @keyframes popBurst { 0% { transform: scale(0.2) translateY(120px) rotate(-10deg); opacity: 0; } 100% { transform: scale(1) translateY(0) rotate(0deg); opacity: 1; } }
+    .card-wrapper-3d img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    
+    .again-btn { margin-top: 40px; padding: 8px 28px; background: #f7b93b; border: none; color: white; -webkit-text-stroke: 1.5px #b88621; font-size: 1.8rem; border-radius: 12px; cursor: pointer; box-shadow: 0 7px 0 #b88621; font-family: inherit; }
+    .again-btn:active { transform: translateY(6px); box-shadow: 0 1px 0 #b88621; }
+
+    /* =========================================================
+       SETTINGS VIEW (NOT A POPUP)
+       ========================================================= */
+    #settings-view {
+      background-color: #5c6270;
+      background-image: url('Icons/SettingsBG.png'), url('SettingsBG.png');
+      background-repeat: repeat;
+      background-size: 130px;
+      flex-direction: column;
+      padding: 40px 60px;
+      overflow-y: auto;
+    }
+
+    .settings-title {
+      font-size: 3.8rem;
+      color: #434752;
+      -webkit-text-stroke: 3px #272a31;
+      paint-order: stroke fill;
+      letter-spacing: 2px;
+      margin-bottom: 25px;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .settings-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 220px;
+    }
+
+    .settings-box {
+      width: 100%;
+      height: 58px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: inherit;
+      box-shadow: 0 7px 0 #1b1c20;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      cursor: pointer;
+    }
+
+    .settings-box:active {
+      transform: translateY(5px);
+      box-shadow: 0 2px 0 #1b1c20;
+    }
+
+    /* Promo code box */
+    .promo-box {
+      background-color: #383a42;
+      background-image: url('Icons/promo.png'), url('promo.png');
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      cursor: text;
+      padding: 0 14px;
+    }
+
+    .settings-input {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-family: inherit;
+      font-size: 1.35rem;
+    }
+
+    .settings-input::placeholder {
+      color: #636773;
+    }
+
+    /* Temp button */
+    .temp-btn {
+      background-color: #383a42;
+      color: #ff4545;
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+
+    /* Admin Rainbow Button */
+    .admin-btn {
+      background-image: url('Icons/admin.png'), url('admin.png'), linear-gradient(180deg, #ff3b30 0%, #ff9500 22%, #ffd60a 44%, #34c759 66%, #007aff 88%, #af52de 100%);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      color: #000;
+      font-size: 1.6rem;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      box-shadow: 0 7px 0 #1b1c20;
+    }
+
+    /* =========================================================
+       MODAL & SIDEBAR
+       ========================================================= */
+    #inspect-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(17, 18, 21, 0.85); backdrop-filter: blur(8px); z-index: 999; display: none; flex-direction: column; align-items: center; justify-content: center; }
+    #inspect-modal.active { display: flex; }
+    .close-inspect-btn { position: absolute; top: 30px; left: 30px; padding: 6px 24px; background: #ef5b5b; color: white; border: 3px solid #c74545; border-radius: 12px; font-size: 1.4rem; cursor: pointer; box-shadow: 0 6px 0 #9d2b2b; font-family: inherit; }
+    .close-inspect-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #9d2b2b; }
+
+    .sidebar { width: 310px; height: 100vh; background-color: #f7b93b; border-left: 14px solid #b88621; display: flex; flex-direction: column; align-items: center; padding: 30px 22px; box-shadow: -12px 0 35px rgba(0, 0, 0, 0.35); z-index: 50; }
+    .logo-container { width: 100%; display: flex; justify-content: center; margin-bottom: 35px; }
+    .logo-img { max-width: 90%; height: auto; object-fit: contain; filter: drop-shadow(0 6px 0 #604e13); }
+    .sidebar-btn { width: 100%; background: none; border: none; padding: 0; margin-bottom: 22px; cursor: pointer; display: flex; justify-content: center; transition: transform 0.06s ease, filter 0.06s ease; outline: none; pointer-events: auto; }
+    .sidebar-btn img { width: 100%; height: auto; display: block; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25)); }
+    .sidebar-btn:active { transform: translateY(6px); filter: brightness(0.95); }
+  </style>
+</head>
+<body>
+
+  <!-- Hidden Folder Picker for Card Scanning -->
+  <input type="file" id="folder-picker-input" webkitdirectory directory multiple style="display:none;" />
+
+  <div id="dashboard">
+    <div id="main-area">
+
+      <!-- BINDER VIEW -->
+      <div id="binder-view" class="view-panel active">
+        <div class="diagonal-text" id="diagonal-text">(cards will sort here)</div>
+        <div class="rarity-row row-common"><div class="badge-container"><img class="rarity-badge-img" src="Icons/COMMON.png" alt="COMMON" /></div><div class="cards-horizontal-strip" id="strip-Common"></div></div>
+        <div class="rarity-row row-uncommon"><div class="badge-container"><img class="rarity-badge-img" src="Icons/UNCOMMON.png" alt="UNCOMMON" /></div><div class="cards-horizontal-strip" id="strip-Uncommon"></div></div>
+        <div class="rarity-row row-rare"><div class="badge-container"><img class="rarity-badge-img" src="Icons/RARE.png" alt="RARE" /></div><div class="cards-horizontal-strip" id="strip-Rare"></div></div>
+        <div class="rarity-row row-epic"><div class="badge-container"><img class="rarity-badge-img" src="Icons/EPIC.png" alt="EPIC" /></div><div class="cards-horizontal-strip" id="strip-Epic"></div></div>
+        <div class="rarity-row row-legendary"><div class="badge-container"><img class="rarity-badge-img" src="Icons/LEGENDARY.png" alt="LEGENDARY" /></div><div class="cards-horizontal-strip" id="strip-Legendary"></div></div>
+        <div class="rarity-row row-mythic"><div class="badge-container"><img class="rarity-badge-img" src="Icons/MYTHIC.png" alt="MYTHIC" /></div><div class="cards-horizontal-strip" id="strip-Mythic"></div></div>
+        <div class="rarity-row row-special"><div class="badge-container"><img class="rarity-badge-img" src="Icons/Special.png" alt="SPECIAL" /></div><div class="cards-horizontal-strip" id="strip-Special"></div></div>
+      </div>
+
+      <!-- SHOP VIEW -->
+      <div id="shop-view" class="view-panel">
+        <div class="pack-wrapper" id="pack-wrapper">
+          <div class="pack-top-hitbox" id="pack-top-hitbox"></div>
+          <img id="pack-top-img" class="pack-top-img flash-alert" src="Icons/pack_top.png" alt="Top Foil" />
+          <div class="pack-body" id="pack-body">
+            <img id="img-pack-body" src="Icons/pack_body.png" alt="Pack Body" />
+          </div>
+        </div>
+
+        <div class="shop-card-stage" id="shop-card-stage">
+          <div class="card-wrapper-3d pop-anim" id="shop-card-3d"><img id="img-pulled-card" src="" alt="Pulled Card" /></div>
+          <button class="again-btn" id="again-btn">OPEN ANOTHER</button>
+        </div>
+      </div>
+
+      <!-- SETTINGS VIEW -->
+      <div id="settings-view" class="view-panel">
+        <h1 class="settings-title">SETTINGS</h1>
+        <div class="settings-stack">
+          <div class="settings-box promo-box">
+            <input type="text" id="promo-input" class="settings-input" placeholder="Type Code..." />
+          </div>
+          <button class="settings-box temp-btn" id="temp-btn-1">(temp)</button>
+          <button class="settings-box temp-btn" id="temp-btn-2">(temp)</button>
+          <button class="settings-box temp-btn" id="temp-btn-3">(temp)</button>
+          <button class="settings-box admin-btn" id="admin-btn">ADMIN</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="logo-container"><img class="logo-img" src="Icons/CARDZ.png" alt="CARDZ" /></div>
+      <button class="sidebar-btn" onclick="alert('Duel mode coming soon!')"><img src="Icons/Duel.png" alt="DUEL" /></button>
+      <button class="sidebar-btn" id="nav-shop-btn"><img src="Icons/Shop.png" alt="SHOP" /></button>
+      <button class="sidebar-btn" id="nav-cards-btn"><img src="Icons/Cards.png" alt="CARDS" /></button>
+      <button class="sidebar-btn" id="nav-settings-btn"><img src="Icons/Settings.png" alt="SETTINGS" /></button>
+    </div>
+  </div>
+
+  <div id="inspect-modal">
+    <button class="close-inspect-btn" id="close-inspect-btn">X CLOSE</button>
+    <div style="perspective:1200px; display:flex; flex-direction:column; align-items:center;">
+      <div class="card-wrapper-3d" id="inspect-card-3d" style="width: 280px;"><img id="img-inspect-card" src="" alt="Inspect" /></div>
+    </div>
+  </div>
+
+  <script>
+    const RARITIES = [
+      { name: 'Common', weight: 50.0 },
+      { name: 'Uncommon', weight: 31.0 },
+      { name: 'Rare', weight: 10.0 },
+      { name: 'Epic', weight: 7.0 },
+      { name: 'Legendary', weight: 1.5 },
+      { name: 'Mythic', weight: 0.4 },
+      { name: 'Special', weight: 0.1 }
+    ];
+
+    const FOLDERS = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Special'];
+    const cardDecks = { Common: [], Uncommon: [], Rare: [], Epic: [], Legendary: [], Mythic: [], Special: [] };
+    const userInventory = { Common: {}, Uncommon: {}, Rare: {}, Epic: {}, Legendary: {}, Mythic: {}, Special: {} };
+    let totalCardsCollected = 0;
+
+    // =========================================================
+    // DYNAMIC FOLDER SCANNING
+    // =========================================================
+    async function autoFetchServerDirectories() {
+      if (!location.protocol.startsWith('http')) return false;
+      let foundAny = false;
+      for (const folder of FOLDERS) {
+        try {
+          const res = await fetch(`./${folder}/`);
+          if (res.ok) {
+            const text = await res.text();
+            const matches = text.match(/href=["']([^"']+\.png)["']/gi);
+            if (matches) {
+              matches.forEach(m => {
+                const raw = m.replace(/href=["']/i, '').replace(/["']$/, '');
+                const filename = raw.split('/').pop();
+                const path = `${folder}/${filename}`;
+                if (!cardDecks[folder].includes(path)) cardDecks[folder].push(path);
+              });
+              foundAny = true;
+            }
+          }
+        } catch (e) {}
+      }
+      if (foundAny) {
+        localStorage.setItem('CardzDecksCache', JSON.stringify(cardDecks));
+      }
+      return foundAny;
+    }
+
+    function processFolderFiles(files) {
+      let count = 0;
+      for (const file of files) {
+        const pathSegments = (file.webkitRelativePath || file.name).split('/');
+        if (pathSegments.length >= 2) {
+          const folder = pathSegments[pathSegments.length - 2];
+          const filename = pathSegments[pathSegments.length - 1];
+
+          if (folder.toLowerCase() === 'icons') continue;
+          if (!filename.toLowerCase().endsWith('.png')) continue;
+
+          const matchedRarity = FOLDERS.find(f => f.toLowerCase() === folder.toLowerCase());
+          if (matchedRarity) {
+            const relPath = `${matchedRarity}/${filename}`;
+            if (!cardDecks[matchedRarity].includes(relPath)) {
+              cardDecks[matchedRarity].push(relPath);
+              count++;
+            }
+          }
+        }
+      }
+      if (count > 0) {
+        localStorage.setItem('CardzDecksCache', JSON.stringify(cardDecks));
+        alert(`Loaded ${count} cards across your folders!`);
+      }
+    }
+
+    const folderInput = document.getElementById('folder-picker-input');
+    folderInput.addEventListener('change', (e) => processFolderFiles(e.target.files));
+
+    // Admin button triggers rescan if clicked
+    document.getElementById('admin-btn').addEventListener('click', () => {
+      const choice = confirm("Admin Options: Click OK to scan/rescan card folders.");
+      if (choice) folderInput.click();
+    });
+
+    // =========================================================
+    // STORAGE & SYNC
+    // =========================================================
+    function saveInventory() { 
+      localStorage.setItem('CardzInventory', JSON.stringify(userInventory)); 
+    }
+
+    function loadCachedData() {
+      try {
+        const savedDecks = localStorage.getItem('CardzDecksCache');
+        if (savedDecks) {
+          const parsed = JSON.parse(savedDecks);
+          for (let r in parsed) {
+            parsed[r].forEach(p => {
+              if (!cardDecks[r].includes(p)) cardDecks[r].push(p);
+            });
+          }
+        }
+      } catch(e) {}
+
+      try {
+        const savedInv = localStorage.getItem('CardzInventory');
+        if (savedInv) {
+          const parsed = JSON.parse(savedInv);
+          totalCardsCollected = 0;
+          for (let r in parsed) {
+            for (let src in parsed[r]) {
+              if (src && !src.includes('card1.png') && src !== 'undefined') {
+                userInventory[r][src] = parsed[r][src];
+                totalCardsCollected += parsed[r][src];
+              }
+            }
+          }
+        }
+      } catch(e) {}
+
+      saveInventory();
+      if (totalCardsCollected > 0) document.getElementById('diagonal-text').style.display = 'none';
+      RARITIES.forEach(r => renderBinderRow(r.name));
+    }
+
+    loadCachedData();
+    autoFetchServerDirectories();
+
+    function addCardToInventory(rarity, src) {
+      if (!userInventory[rarity][src]) userInventory[rarity][src] = 0;
+      userInventory[rarity][src]++;
+      totalCardsCollected++;
+      document.getElementById('diagonal-text').style.display = 'none';
+      saveInventory();
+      renderBinderRow(rarity);
+    }
+
+    // =========================================================
+    // VIEW NAVIGATION (TAB SWITCHING)
+    // =========================================================
+    const binderView = document.getElementById('binder-view');
+    const shopView = document.getElementById('shop-view');
+    const settingsView = document.getElementById('settings-view');
+    const packTopImgDOM = document.getElementById('pack-top-img');
+
+    function switchView(target) {
+      binderView.classList.remove('active');
+      shopView.classList.remove('active');
+      settingsView.classList.remove('active');
+      packTopImgDOM.classList.remove('flash-alert');
+
+      if (target === 'binder') {
+        binderView.classList.add('active');
+      } else if (target === 'shop') {
+        shopView.classList.add('active');
+        packTopImgDOM.classList.add('flash-alert');
+      } else if (target === 'settings') {
+        settingsView.classList.add('active');
+      }
+    }
+
+    document.getElementById('nav-cards-btn').addEventListener('click', () => switchView('binder'));
+    document.getElementById('nav-shop-btn').addEventListener('click', () => switchView('shop'));
+    document.getElementById('nav-settings-btn').addEventListener('click', () => switchView('settings'));
+
+    function attach3DEffect(elId) {
+      const el = document.getElementById(elId);
+      el.addEventListener('mousemove', (e) => {
+        const rect = el.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+        const rotateY = ((x - rect.width / 2) / (rect.width / 2)) * 22, rotateX = -((y - rect.height / 2) / (rect.height / 2)) * 22;
+        el.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.08, 1.08, 1.08)`;
+      });
+      el.addEventListener('mouseleave', () => el.style.transform = 'rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)');
+    }
+    attach3DEffect('shop-card-3d');
+    attach3DEffect('inspect-card-3d');
+
+    function renderBinderRow(rarity) {
+      const strip = document.getElementById(`strip-${rarity}`);
+      if (!strip) return;
+      strip.innerHTML = '';
+      for (const [src, count] of Object.entries(userInventory[rarity])) {
+        const stackDiv = document.createElement('div');
+        stackDiv.className = 'card-stack';
+        stackDiv.onclick = () => openInspectModal(src);
+
+        if (count > 1) {
+          const countDiv = document.createElement('div');
+          countDiv.className = 'stack-count';
+          countDiv.textContent = `x${count}`;
+          stackDiv.appendChild(countDiv);
+        }
+        if (count >= 3) {
+          const l2 = document.createElement('img');
+          l2.className = 'stack-layer layer-2';
+          l2.src = src;
+          stackDiv.appendChild(l2);
+        }
+        if (count >= 2) {
+          const l1 = document.createElement('img');
+          l1.className = 'stack-layer layer-1';
+          l1.src = src;
+          stackDiv.appendChild(l1);
+        }
+
+        const front = document.createElement('img');
+        front.className = 'stack-layer layer-front';
+        front.src = src;
+
+        front.onerror = () => {
+          delete userInventory[rarity][src];
+          saveInventory();
+          stackDiv.remove();
+        };
+
+        stackDiv.appendChild(front);
+        strip.appendChild(stackDiv);
+      }
+    }
+
+    const inspectModal = document.getElementById('inspect-modal');
+    document.getElementById('close-inspect-btn').addEventListener('click', () => inspectModal.classList.remove('active'));
+    function openInspectModal(src) {
+      document.getElementById('img-inspect-card').src = src;
+      document.getElementById('inspect-card-3d').style.transform = 'none';
+      inspectModal.classList.add('active');
+    }
+
+    // =========================================================
+    // DYNAMIC PULL LOGIC (SOUND COMPLETELY REMOVED)
+    // =========================================================
+    const packWrapper = document.getElementById('pack-wrapper'),
+          hitbox = document.getElementById('pack-top-hitbox'),
+          shopCardStage = document.getElementById('shop-card-stage');
+    let isDragging = false, startY = 0;
+
+    function pullCardData() {
+      const populatedRarities = RARITIES.filter(r => cardDecks[r.name] && cardDecks[r.name].length > 0);
+      if (populatedRarities.length === 0) return null;
+
+      const totalWeight = populatedRarities.reduce((sum, r) => sum + r.weight, 0);
+      let rand = Math.random() * totalWeight;
+      let selectedRarity = populatedRarities[0].name;
+
+      for (const r of populatedRarities) {
+        if (rand < r.weight) {
+          selectedRarity = r.name;
+          break;
+        }
+        rand -= r.weight;
+      }
+
+      const deck = cardDecks[selectedRarity];
+      const pulledSrc = deck[Math.floor(Math.random() * deck.length)];
+      return { rarity: selectedRarity, src: pulledSrc };
+    }
+
+    function onPointerDown(e) {
+      isDragging = true;
+      const point = e.touches ? e.touches[0] : e;
+      startY = point.clientY;
+      packTopImgDOM.style.transition = 'none';
+      packTopImgDOM.classList.remove('flash-alert');
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging) return;
+      const pullUp = Math.max(0, -((e.touches ? e.touches[0] : e).clientY - startY));
+      let stretchY = 1 + (pullUp / 100);
+      packTopImgDOM.style.transform = `scaleY(${stretchY})`;
+      if (pullUp > 150) completeTear();
+    }
+
+    function onPointerUp() {
+      if (!isDragging) return;
+      isDragging = false;
+      packTopImgDOM.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)';
+      packTopImgDOM.style.transform = 'scaleY(1)';
+      packTopImgDOM.classList.add('flash-alert');
+    }
+
+    hitbox.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+    hitbox.addEventListener('touchstart', onPointerDown);
+    window.addEventListener('touchmove', onPointerMove);
+    window.addEventListener('touchend', onPointerUp);
+
+    function completeTear() {
+      isDragging = false;
+      packTopImgDOM.classList.remove('flash-alert');
+
+      const pulled = pullCardData();
+      if (!pulled) {
+        alert('No card files detected! Please click OK and select your CardZ folder so the browser can index your PNGs.');
+        onPointerUp();
+        folderInput.click();
+        return;
+      }
+
+      // Pack opening tear animation (audio removed)
+      packTopImgDOM.style.transition = 'transform 0.35s ease-in, opacity 0.3s';
+      packTopImgDOM.style.transform = 'translateY(-120px) scaleY(1.5)';
+      packTopImgDOM.style.opacity = '0';
+
+      setTimeout(() => {
+        packWrapper.style.display = 'none';
+        document.getElementById('img-pulled-card').src = pulled.src;
+        shopCardStage.classList.add('active');
+        const card3D = document.getElementById('shop-card-3d');
+        card3D.classList.remove('pop-anim');
+        void card3D.offsetWidth;
+        card3D.classList.add('pop-anim');
+        addCardToInventory(pulled.rarity, pulled.src);
+      }, 350);
+    }
+
+    document.getElementById('again-btn').addEventListener('click', () => {
+      shopCardStage.classList.remove('active');
+      document.getElementById('shop-card-3d').style.transform = 'none';
+      packTopImgDOM.style.transition = 'none';
+      packTopImgDOM.style.transform = 'none';
+      packTopImgDOM.style.opacity = '1';
+      packWrapper.style.display = 'flex';
+      packTopImgDOM.classList.add('flash-alert');
+    });
+  </script>
+</body>
+</html>
