@@ -228,63 +228,60 @@
       display: none;
     }
 
-    /* Rainbow Admin Panel Popup */
+    /* 600x800 Aspect Ratio Rainbow Admin Panel */
     #admin-panel {
       display: none;
-      width: 340px;
-      height: 580px;
-      max-height: calc(100vh - 70px);
+      width: 480px;
+      height: 640px;
+      aspect-ratio: 600 / 800;
+      max-height: calc(100vh - 60px);
       background-image: url('Icons/Panel.png');
       background-size: 100% 100%;
       background-repeat: no-repeat;
-      border-radius: 18px;
-      padding: 30px 20px 22px 20px;
+      border-radius: 20px;
+      padding: 20px 24px 22px 24px;
       flex-direction: column;
       align-items: center;
       box-shadow: 0 14px 35px rgba(0,0,0,0.55);
-      margin-top: 15px;
+      margin-top: 10px;
       flex-shrink: 0;
+      position: relative;
     }
 
     #admin-panel.active {
       display: flex;
     }
 
+    /* Header leaves clear room for the baked-in 'ADMIN PANEL' text on Panel.png */
     .admin-panel-header {
       width: 100%;
       display: flex;
+      justify-content: flex-end;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: 15px;
-      padding: 0 4px;
-    }
-
-    .admin-panel-title {
-      font-size: 2.2rem;
-      color: #000;
-      font-weight: 900;
-      -webkit-text-stroke: 1.5px #000;
-      line-height: 1;
+      height: 65px;
+      margin-bottom: 8px;
     }
 
     .admin-close-btn {
-      background: rgba(0, 0, 0, 0.2);
-      border: 2px solid #000;
+      background: rgba(0, 0, 0, 0.3);
+      border: 2.5px solid #000;
       border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      font-size: 1.1rem;
+      width: 36px;
+      height: 36px;
+      font-size: 1.25rem;
       font-weight: 900;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #000;
-      transition: background 0.1s;
+      transition: transform 0.1s, background 0.1s;
     }
 
     .admin-close-btn:hover {
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      transform: scale(1.08);
     }
 
     .admin-cards-scroll {
@@ -294,81 +291,88 @@
       overflow-x: hidden;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      padding-right: 4px;
+      gap: 12px;
+      padding-right: 6px;
     }
 
-    .admin-cards-scroll::-webkit-scrollbar { width: 6px; }
-    .admin-cards-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.35); border-radius: 3px; }
+    .admin-cards-scroll::-webkit-scrollbar { width: 8px; }
+    .admin-cards-scroll::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); border-radius: 4px; }
+    .admin-cards-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.35); border-radius: 4px; }
 
     .admin-card-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 1.15rem;
+      font-size: 1.25rem;
       font-weight: 900;
       color: #000;
-      background: rgba(255, 255, 255, 0.25);
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid rgba(0, 0, 0, 0.15);
+      background: rgba(255, 255, 255, 0.32);
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1.5px solid rgba(0, 0, 0, 0.2);
+      white-space: nowrap;
     }
 
     .admin-card-row-text {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       flex: 1;
-      flex-wrap: wrap;
+      white-space: nowrap;
     }
 
     .admin-qty-input {
-      width: 52px;
-      height: 32px;
+      width: 68px;
+      height: 36px;
       text-align: center;
-      font-size: 1.2rem;
+      font-size: 1.25rem;
       font-family: inherit;
       font-weight: 900;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.95);
       border: 2px solid #000;
-      border-radius: 6px;
+      border-radius: 8px;
       outline: none;
       color: #000;
       cursor: text;
     }
 
     .admin-add-card-btn {
-      padding: 6px 12px;
+      padding: 7px 15px;
       background: #111;
       color: #fff;
       border: none;
       border-radius: 8px;
       font-family: inherit;
-      font-size: 0.95rem;
+      font-size: 1.05rem;
       font-weight: 900;
       cursor: pointer;
       white-space: nowrap;
-      box-shadow: 0 3px 0 #000;
+      box-shadow: 0 4px 0 #000;
       transition: transform 0.05s ease;
     }
 
     .admin-add-card-btn:active {
-      transform: translateY(2px);
+      transform: translateY(3px);
       box-shadow: 0 1px 0 #000;
     }
 
     .admin-rescan-btn {
-      margin-top: 10px;
+      margin-top: 12px;
       width: 100%;
-      padding: 8px 0;
+      padding: 10px 0;
       background: #111;
       color: white;
       border: 2px solid #000;
-      border-radius: 8px;
+      border-radius: 10px;
       font-family: inherit;
-      font-size: 1.1rem;
-      font-weight: bold;
+      font-size: 1.2rem;
+      font-weight: 900;
       cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.5);
+    }
+    .admin-rescan-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
     }
 
     /* =========================================================
@@ -438,10 +442,9 @@
           </div>
         </div>
 
-        <!-- Populated Rainbow Admin Panel -->
+        <!-- 600x800 Proportion Admin Panel (No Duplicate Title Text) -->
         <div id="admin-panel">
           <div class="admin-panel-header">
-            <span class="admin-panel-title">ADMIN PANEL</span>
             <button class="admin-close-btn" id="admin-panel-close">✕</button>
           </div>
           <div class="admin-cards-scroll" id="admin-cards-list"></div>
@@ -484,7 +487,6 @@
     const userInventory = { Common: {}, Uncommon: {}, Rare: {}, Epic: {}, Legendary: {}, Mythic: {}, Special: {} };
     let totalCardsCollected = 0;
 
-    // Seed standard starter cards if folders haven't been indexed yet
     const DEFAULT_CARDS = {
       Common: ['Common/Smiley.png', 'Common/Crayons.png'],
       Uncommon: ['Uncommon/Folder.png', 'Uncommon/Cheese.png'],
@@ -593,7 +595,6 @@
             qtyInput.type = 'number';
             qtyInput.className = 'admin-qty-input';
             qtyInput.value = '1';
-            qtyInput.min = '1';
 
             const nameSpan = document.createElement('span');
             nameSpan.textContent = ` ${filename} cards`;
@@ -606,9 +607,10 @@
             addBtn.className = 'admin-add-card-btn';
             addBtn.textContent = '+ ADD';
             addBtn.onclick = () => {
-              const qty = parseInt(qtyInput.value) || 1;
+              const qty = parseInt(qtyInput.value);
+              if (isNaN(qty) || qty === 0) return;
               addCardToInventory(rarity, src, qty);
-              addBtn.textContent = 'ADDED!';
+              addBtn.textContent = qty < 0 ? 'REMOVED!' : 'ADDED!';
               setTimeout(() => { addBtn.textContent = '+ ADD'; }, 800);
             };
 
@@ -656,7 +658,7 @@
     });
 
     // =========================================================
-    // STORAGE & SYNC
+    // STORAGE & SYNC (WITH NEGATIVE SUBTRACTION/DELETION)
     // =========================================================
     function saveInventory() { 
       localStorage.setItem('CardzInventory', JSON.stringify(userInventory)); 
@@ -675,7 +677,6 @@
         }
       } catch(e) {}
 
-      // If no decks are cached yet, load starter cards
       let hasAny = false;
       for (let r in cardDecks) {
         if (cardDecks[r].length > 0) hasAny = true;
@@ -693,7 +694,7 @@
           totalCardsCollected = 0;
           for (let r in parsed) {
             for (let src in parsed[r]) {
-              if (src && !src.includes('card1.png') && src !== 'undefined') {
+              if (src && !src.includes('card1.png') && src !== 'undefined' && parsed[r][src] > 0) {
                 userInventory[r][src] = parsed[r][src];
                 totalCardsCollected += parsed[r][src];
               }
@@ -712,11 +713,31 @@
     autoFetchServerDirectories();
 
     function addCardToInventory(rarity, src, qty = 1) {
-      qty = parseInt(qty) || 1;
+      qty = parseInt(qty) || 0;
+      if (qty === 0) return;
+
       if (!userInventory[rarity][src]) userInventory[rarity][src] = 0;
       userInventory[rarity][src] += qty;
-      totalCardsCollected += qty;
-      document.getElementById('diagonal-text').style.display = 'none';
+
+      // If the card quantity reaches 0 or falls into negatives, completely remove it
+      if (userInventory[rarity][src] <= 0) {
+        delete userInventory[rarity][src];
+      }
+
+      // Recalculate total card count across all rarities
+      totalCardsCollected = 0;
+      for (let r in userInventory) {
+        for (let s in userInventory[r]) {
+          totalCardsCollected += userInventory[r][s];
+        }
+      }
+
+      if (totalCardsCollected > 0) {
+        document.getElementById('diagonal-text').style.display = 'none';
+      } else {
+        document.getElementById('diagonal-text').style.display = 'block';
+      }
+
       saveInventory();
       renderBinderRow(rarity);
     }
