@@ -52,6 +52,7 @@
     .row-mythic    { background-color: #cfbc41; }
     .row-special   { background-color: #25262c; }
 
+    /* UNIFORM VISUAL FONT BADGE CONTAINER */
     .badge-container { 
       width: 280px; 
       min-width: 280px; 
@@ -59,14 +60,16 @@
       display: flex; 
       align-items: center; 
       justify-content: center; 
-      padding: 0 20px; 
+      padding: 0 15px; 
       flex-shrink: 0; 
       z-index: 5; 
     }
+
+    /* Fixed visual height prevents long words from shrinking and short words from swelling */
     .rarity-badge-img { 
-      height: 48px; 
-      max-height: 48px; 
-      width: 200px; 
+      height: 38px; 
+      width: auto; 
+      max-width: 250px; 
       object-fit: contain; 
       filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35)); 
     }
@@ -252,7 +255,6 @@
       display: flex;
     }
 
-    /* Header leaves clear room for the baked-in 'ADMIN PANEL' text on Panel.png */
     .admin-panel-header {
       width: 100%;
       display: flex;
@@ -719,12 +721,10 @@
       if (!userInventory[rarity][src]) userInventory[rarity][src] = 0;
       userInventory[rarity][src] += qty;
 
-      // If the card quantity reaches 0 or falls into negatives, completely remove it
       if (userInventory[rarity][src] <= 0) {
         delete userInventory[rarity][src];
       }
 
-      // Recalculate total card count across all rarities
       totalCardsCollected = 0;
       for (let r in userInventory) {
         for (let s in userInventory[r]) {
