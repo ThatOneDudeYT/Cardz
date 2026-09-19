@@ -52,7 +52,7 @@
     .row-mythic    { background-color: #cfbc41; }
     .row-special   { background-color: #25262c; }
 
-    /* UNIFORM VISUAL FONT BADGE CONTAINER */
+    /* UNIFORM BADGE CONTAINER */
     .badge-container { 
       width: 280px; 
       min-width: 280px; 
@@ -65,14 +65,21 @@
       z-index: 5; 
     }
 
-    /* Fixed visual height prevents long words from shrinking and short words from swelling */
     .rarity-badge-img { 
-      height: 38px; 
       width: auto; 
       max-width: 250px; 
       object-fit: contain; 
       filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35)); 
     }
+
+    /* Calibrated heights to counteract the extra transparent padding inside Common & Uncommon */
+    .row-common .rarity-badge-img    { height: 64px; }
+    .row-uncommon .rarity-badge-img  { height: 72px; }
+    .row-rare .rarity-badge-img      { height: 38px; }
+    .row-epic .rarity-badge-img      { height: 36px; }
+    .row-legendary .rarity-badge-img { height: 34px; }
+    .row-mythic .rarity-badge-img    { height: 34px; }
+    .row-special .rarity-badge-img   { height: 40px; }
 
     .cards-horizontal-strip { flex: 1; height: 100%; display: flex; align-items: center; gap: 35px; overflow-x: auto; overflow-y: hidden; padding: 50px 25px 15px 10px; }
     .cards-horizontal-strip::-webkit-scrollbar { height: 8px; }
@@ -231,7 +238,7 @@
       display: none;
     }
 
-    /* 600x800 Aspect Ratio Rainbow Admin Panel */
+    /* 600x800 Proportion Admin Panel */
     #admin-panel {
       display: none;
       width: 480px;
@@ -444,7 +451,7 @@
           </div>
         </div>
 
-        <!-- 600x800 Proportion Admin Panel (No Duplicate Title Text) -->
+        <!-- 600x800 Proportion Admin Panel -->
         <div id="admin-panel">
           <div class="admin-panel-header">
             <button class="admin-close-btn" id="admin-panel-close">✕</button>
